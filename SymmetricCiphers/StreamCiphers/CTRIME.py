@@ -1,40 +1,41 @@
+import time
 import requests
 import string
-import sys
 
-def solve():
-    url = "https://aes.cryptohack.org/ctrime/encrypt/"
-    charset = string.ascii_letters + string.digits + "{}_!?"
-    flag = "crypto{"
+def print_blk(hex_blks, sz):
+   for i in range(0, len(hex_blks), sz):
+       print(hex_blks[i:i+sz], ' ', end='')
+   print()
+
+def encrypt(plain):
+    url = 'http://aes.cryptohack.org/ctrime/encrypt/'
+    rsp = requests.get(url + plain + '/')
+    return rsp.json()['ciphertext']
+
+alphabet = '}'+'!'+'_'+'@'+'?'+string.ascii_uppercase+string.digits+string.ascii_lowercase
+
+def bruteforce():
     
-    while not flag.endswith("}"):
-        min_len = 999999
-        best_chars = []
-        
-        for c in charset:
-            test_str = flag + c
-            test_hex = test_str.encode().hex()
-            
-            try:
-                r = requests.get(f"{url}{test_hex}/")
-                data = r.json()
-                
-                if "ciphertext" in data:
-                    ct_len = len(data["ciphertext"])
-                    
-                    if ct_len < min_len:
-                        min_len = ct_len
-                        best_chars = [c]
-                    elif ct_len == min_len:
-                        best_chars.append(c)
-            except Exception:
-                sys.exit(1)
-                
-        if best_chars:
-            flag += best_chars[0]
+    flag = b'crypto{'
+    cipher = encrypt(flag.hex())
+    mi = len(cipher)
+
+    while True:
+        for c in alphabet:
+            cipher = encrypt((flag+c.encode()).hex())
+            print(c, len(cipher))
+            if mi == len(cipher):
+                flag += c.encode()
+                mi = len(cipher)
+                print(mi, flag)
+                break
+            if c == alphabet[-1]:
+                mi += 2
+                break
+            time.sleep(1)
+
+        if flag.endswith(b'}'): 
             print(flag)
-        else:
             break
 
-if __name__ == '__main__':
-    solve()
+bruteforce()
